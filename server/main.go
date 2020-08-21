@@ -5,33 +5,63 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+type connection struct {
+	userid string
+	conn   *websocket.Conn
+	send   chan string
+}
+
+type connections struct {
+	numOfConnections int64
+	conns            []*connection
+}
+
+var clientsConnected connections
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
-func reader(conn *websocket.Conn) {
+func reader(c *connection) {
 	for {
-		_, msg, err := conn.ReadMessage()
+		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Panic(err)
 		}
 
-		conn.WriteMessage(2, msg)
+		message := c.userid + " : " + string(msg)
+		c.conn.WriteMessage(2, []byte(message))
 	}
 }
 
-func socketHandler(w http.ResponseWriter, r *http.Request) {
+func newSocketConnection(w http.ResponseWriter, r *http.Request) {
+	userid := uuid.New().String()
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	reader(conn)
+	conn.WriteMessage(5, []byte(userid))
+
+	c := &connection{
+		userid: userid,
+		conn:   conn,
+		send:   make(chan string),
+	}
+
+	clientsConnected.numOfConnections++
+	clientsConnected.conns = append(clientsConnected.conns, c)
+
+	fmt.Println("New user connected: " + userid)
+
+	go reader(c)
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +70,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", healthCheck)
-	http.HandleFunc("/ws", socketHandler)
+	http.HandleFunc("/ws", newSocketConnection)
 
 	fmt.Println("Server is Up and running on 3000")
 

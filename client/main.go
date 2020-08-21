@@ -12,15 +12,16 @@ import (
 
 // !=
 
+var userid string
+
 func reader(conn *websocket.Conn, errChan chan<- string) {
 	for {
-		messageType, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
 			errChan <- "Stop"
 		}
 
-		fmt.Println(messageType)
 		fmt.Println(string(msg))
 	}
 }
@@ -58,10 +59,10 @@ func main() {
 
 	senderOrReceiverError := make(chan string)
 
+	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging ")
+
 	go sender(conn, senderOrReceiverError)
 	go reader(conn, senderOrReceiverError)
-
-	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging ")
 
 	<-senderOrReceiverError
 }
