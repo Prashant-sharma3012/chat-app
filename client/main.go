@@ -12,11 +12,12 @@ import (
 
 // !=
 
-func reader(conn *websocket.Conn) {
+func reader(conn *websocket.Conn, errChan chan<- string) {
 	for {
 		messageType, msg, err := conn.ReadMessage()
 		if err != nil {
-			log.Panic(err)
+			fmt.Println(err)
+			errChan <- "Stop"
 		}
 
 		fmt.Println(messageType)
@@ -24,15 +25,24 @@ func reader(conn *websocket.Conn) {
 	}
 }
 
-func sender(conn *websocket.Conn) {
+func sender(conn *websocket.Conn, errChan chan<- string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		conn.WriteMessage(2, []byte(scanner.Text()))
+		msg := scanner.Text()
+
+		if msg == "Quit" {
+			conn.Close()
+			errChan <- "Stop"
+			return
+		}
+
+		conn.WriteMessage(2, []byte(msg))
 	}
 
 	if scanner.Err() != nil {
 		// handle error.
-		log.Fatal(scanner.Err())
+		fmt.Println(scanner.Err())
+		errChan <- "Stop"
 	}
 }
 
@@ -40,15 +50,18 @@ func main() {
 
 	dialer := &websocket.Dialer{}
 
-	conn, res, err := dialer.Dial("ws://localhost:3000/ws", http.Header{})
+	conn, _, err := dialer.Dial("ws://localhost:3000/ws", http.Header{})
 	if err != nil {
 		fmt.Println(err)
 		log.Panic()
 	}
 
-	go sender(conn)
+	senderOrReceiverError := make(chan string)
 
-	fmt.Println(res)
-	conn.WriteMessage(2, []byte("Hello"))
-	reader(conn)
+	go sender(conn, senderOrReceiverError)
+	go reader(conn, senderOrReceiverError)
+
+	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging ")
+
+	<-senderOrReceiverError
 }

@@ -15,13 +15,10 @@ var upgrader = websocket.Upgrader{
 
 func reader(conn *websocket.Conn) {
 	for {
-		messageType, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Panic(err)
 		}
-
-		fmt.Println(messageType)
-		fmt.Println(string(msg))
 
 		conn.WriteMessage(2, msg)
 	}
@@ -42,9 +39,10 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	http.HandleFunc("/", healthCheck)
 	http.HandleFunc("/ws", socketHandler)
+
+	fmt.Println("Server is Up and running on 3000")
 
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
