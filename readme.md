@@ -1,0 +1,1 @@
+Chat application that uses websockets and runs on terminal
