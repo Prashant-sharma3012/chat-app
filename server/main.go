@@ -34,7 +34,7 @@ func reader(c *connection) {
 			log.Panic(err)
 		}
 
-		message := c.userid + " : " + string(msg)
+		message := c.userid + ": " + string(msg)
 		c.conn.WriteMessage(2, []byte(message))
 	}
 }

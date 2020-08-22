@@ -13,6 +13,9 @@ import (
 // !=
 
 var userid string
+var messagePrefixOut = "> you: "
+var messagePrefixIn = "> "
+var quitMessage = "Good Bye :)"
 
 func reader(conn *websocket.Conn, errChan chan<- string) {
 	for {
@@ -22,16 +25,21 @@ func reader(conn *websocket.Conn, errChan chan<- string) {
 			errChan <- "Stop"
 		}
 
+		fmt.Print(messagePrefixIn)
 		fmt.Println(string(msg))
+		fmt.Print(messagePrefixOut)
 	}
 }
 
 func sender(conn *websocket.Conn, errChan chan<- string) {
+	fmt.Print(messagePrefixOut)
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		msg := scanner.Text()
 
 		if msg == "Quit" {
+			fmt.Print(messagePrefixIn)
+			fmt.Println(quitMessage)
 			conn.Close()
 			errChan <- "Stop"
 			return
@@ -47,6 +55,10 @@ func sender(conn *websocket.Conn, errChan chan<- string) {
 	}
 }
 
+func successMessage() {
+	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging")
+}
+
 func main() {
 
 	dialer := &websocket.Dialer{}
@@ -57,9 +69,9 @@ func main() {
 		log.Panic()
 	}
 
+	// on successful connect write options and meesage to console
+	successMessage()
 	senderOrReceiverError := make(chan string)
-
-	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging ")
 
 	go sender(conn, senderOrReceiverError)
 	go reader(conn, senderOrReceiverError)
