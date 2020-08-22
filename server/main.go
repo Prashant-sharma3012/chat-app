@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+var supportedCommands = map[string]string{
+	"Quit":    "_Q_",
+	"Connect": "Connect <connection_id>",
+}
+
+var usersChatMap = map[string]string{}
+var userConnMap = map[string]*websocket.Conn{}
 
 type connection struct {
 	userid string
@@ -34,8 +43,31 @@ func reader(c *connection) {
 			log.Panic(err)
 		}
 
-		message := c.userid + ": " + string(msg)
-		c.conn.WriteMessage(2, []byte(message))
+		// its a connect message
+		if parts := strings.Split(string(msg), " "); parts[0] == "_C_" {
+			userid := parts[1]
+			usersChatMap[userid] = c.userid
+			usersChatMap[c.userid] = userid
+			userConnMap[c.userid] = c.conn
+
+			for _, conn := range clientsConnected.conns {
+				if conn.userid == userid {
+					userConnMap[userid] = conn.conn
+				}
+			}
+
+			c.conn.WriteMessage(2, []byte("Connection successful"))
+
+		} else {
+			// check if user has an entry in userchatmap
+			// route messages tothat user
+			if sendTo, ok := usersChatMap[c.userid]; ok {
+				userConnMap[sendTo].WriteMessage(2, msg)
+			} else {
+				message := c.userid + ": " + string(msg)
+				c.conn.WriteMessage(2, []byte(message))
+			}
+		}
 	}
 }
 

@@ -12,6 +12,11 @@ import (
 
 // !=
 
+var supportedCommands = map[string]string{
+	"Quit":    "_Q_",
+	"Connect": "_C_ <connection_id>",
+}
+
 var userid string
 var messagePrefixOut = "> you: "
 var messagePrefixIn = "> "
@@ -56,11 +61,14 @@ func sender(conn *websocket.Conn, errChan chan<- string) {
 }
 
 func successMessage() {
-	fmt.Println("Client is Up and running, Type: 'Quit' to stop messaging")
+	fmt.Println("##################Client is Up and running#################")
+	fmt.Println("You can Use following Commands:")
+	for k, v := range supportedCommands {
+		fmt.Println(k, " : ", v)
+	}
 }
 
 func main() {
-
 	dialer := &websocket.Dialer{}
 
 	conn, _, err := dialer.Dial("ws://localhost:3000/ws", http.Header{})
