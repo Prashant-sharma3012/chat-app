@@ -57,18 +57,14 @@ func sender(conn *websocket.Conn, errChan chan<- string) {
 		if msg == "_QC_" {
 			fmt.Print(messagePrefixIn)
 			fmt.Println(chatQuitMessage)
-			errChan <- "Stop"
-			return
-		}
-
-		if msg == "_ID_" {
+			conn.WriteMessage(2, []byte(msg))
+		} else if msg == "_ID_" {
 			fmt.Print(messagePrefixIn)
 			fmt.Print("ID - ")
 			fmt.Println(id)
-			return
+		} else {
+			conn.WriteMessage(2, []byte(msg))
 		}
-
-		conn.WriteMessage(2, []byte(msg))
 	}
 
 	if scanner.Err() != nil {
