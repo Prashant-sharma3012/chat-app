@@ -19,7 +19,6 @@ var supportedCommands = map[string]string{
 	"My unique ID to start a chat": "_ID_",
 }
 
-var userid string
 var messagePrefixOut = "> you: "
 var messagePrefixIn = "> "
 var quitMessage = "Good Bye :)"
@@ -60,8 +59,8 @@ func sender(conn *websocket.Conn, errChan chan<- string) {
 			conn.WriteMessage(2, []byte(msg))
 		} else if msg == "_ID_" {
 			fmt.Print(messagePrefixIn)
-			fmt.Print("ID - ")
-			fmt.Println(id)
+			fmt.Println("Fecthing Your Unique ID")
+			conn.WriteMessage(2, []byte(msg))
 		} else {
 			conn.WriteMessage(2, []byte(msg))
 		}
@@ -85,19 +84,19 @@ func successMessage() {
 
 func main() {
 	dialer := &websocket.Dialer{}
-
 	conn, _, err := dialer.Dial("ws://localhost:3000/ws", http.Header{})
 	if err != nil {
 		fmt.Println(err)
 		log.Panic()
 	}
 
-	// on successful connect write options and meesage to console
-	successMessage()
 	senderOrReceiverError := make(chan string)
 
 	go sender(conn, senderOrReceiverError)
 	go reader(conn, senderOrReceiverError)
+
+	// on successful connect write options and meesage to console
+	successMessage()
 
 	<-senderOrReceiverError
 }

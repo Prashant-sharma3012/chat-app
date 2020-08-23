@@ -80,7 +80,9 @@ func reader(c *connection) {
 
 		parts := strings.Split(string(msg), " ")
 
-		if parts[0] == "_C_" {
+		if string(msg) == "_ID_" {
+			c.conn.WriteMessage(2, []byte(c.userid))
+		} else if parts[0] == "_C_" {
 			userid := parts[1]
 			usersChatMap[userid] = c.userid
 			usersChatMap[c.userid] = userid
