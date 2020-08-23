@@ -73,43 +73,33 @@ func reader(c *connection) {
 				fmt.Println("User Disconnected: " + c.userid)
 				// remove the conn from map and also form connections array
 				deleteAllEntries(c)
-				return
 			}
-			log.Panic(err)
+			fmt.Println(err)
+			return
 		}
 
-		// its a connect message
 		parts := strings.Split(string(msg), " ")
 
 		if parts[0] == "_C_" {
 			userid := parts[1]
 			usersChatMap[userid] = c.userid
 			usersChatMap[c.userid] = userid
-
 			c.conn.WriteMessage(2, []byte("Connection successful"))
-			return
-		}
-
-		if parts[0] == "_QC_" {
+		} else if parts[0] == "_QC_" {
 			userToNotify := usersChatMap[c.userid]
 			closeMessage := c.userid + " Closed the current chat"
 			delete(usersChatMap, c.userid)
 			delete(usersChatMap, userToNotify)
-
 			userConnMap[userToNotify].WriteMessage(2, []byte(closeMessage))
-			return
-		}
-
-		// check if user has an entry in userchatmap
-		// route messages tothat user
-		if sendTo, ok := usersChatMap[c.userid]; ok {
+		} else if sendTo, ok := usersChatMap[c.userid]; ok {
+			fmt.Println("to chat")
+			fmt.Println(sendTo)
+			fmt.Println(string(msg))
 			userConnMap[sendTo].WriteMessage(2, msg)
-			return
+		} else {
+			message := c.userid + ": " + string(msg)
+			c.conn.WriteMessage(2, []byte(message))
 		}
-
-		message := c.userid + ": " + string(msg)
-		c.conn.WriteMessage(2, []byte(message))
-		return
 	}
 }
 
