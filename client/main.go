@@ -13,14 +13,18 @@ import (
 // !=
 
 var supportedCommands = map[string]string{
-	"Quit":    "_Q_",
-	"Connect": "_C_ <connection_id>",
+	"Quit":                         "_Q_",
+	"Connect":                      "_C_ <connection_id>",
+	"Quit Chat":                    "_QC_",
+	"My unique ID to start a chat": "_ID_",
 }
 
 var userid string
 var messagePrefixOut = "> you: "
 var messagePrefixIn = "> "
 var quitMessage = "Good Bye :)"
+var chatQuitMessage = "Current Chat Connection closed."
+var id string
 
 func reader(conn *websocket.Conn, errChan chan<- string) {
 	for {
@@ -42,11 +46,25 @@ func sender(conn *websocket.Conn, errChan chan<- string) {
 	for scanner.Scan() {
 		msg := scanner.Text()
 
-		if msg == "Quit" {
+		if msg == "_Q_" {
 			fmt.Print(messagePrefixIn)
 			fmt.Println(quitMessage)
 			conn.Close()
 			errChan <- "Stop"
+			return
+		}
+
+		if msg == "_QC_" {
+			fmt.Print(messagePrefixIn)
+			fmt.Println(chatQuitMessage)
+			errChan <- "Stop"
+			return
+		}
+
+		if msg == "_ID_" {
+			fmt.Print(messagePrefixIn)
+			fmt.Print("ID - ")
+			fmt.Println(id)
 			return
 		}
 
@@ -66,6 +84,7 @@ func successMessage() {
 	for k, v := range supportedCommands {
 		fmt.Println(k, " : ", v)
 	}
+	fmt.Println("###########################################################")
 }
 
 func main() {

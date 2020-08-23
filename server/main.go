@@ -11,8 +11,9 @@ import (
 )
 
 var supportedCommands = map[string]string{
-	"Quit":    "_Q_",
-	"Connect": "Connect <connection_id>",
+	"Quit":      "_Q_",
+	"Connect":   "Connect <connection_id>",
+	"Quit Chat": "_QC_ <connection_id>",
 }
 
 var usersChatMap = map[string]string{}
@@ -36,38 +37,79 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+func removeFromClientsConnected(pos int) []*connection {
+	clientsConnected.conns[pos] = clientsConnected.conns[len(clientsConnected.conns)-1]
+	return clientsConnected.conns[:len(clientsConnected.conns)-1]
+}
+
+func deleteAllEntries(c *connection) {
+	// remove from connMap
+	delete(userConnMap, c.userid)
+
+	// remove from chat map
+	for k, v := range usersChatMap {
+		if k == c.userid || v == c.userid {
+			delete(usersChatMap, k)
+		}
+	}
+
+	// remove from connected clients
+	indexToRemove := 0
+	for indx, v := range clientsConnected.conns {
+		if v.userid == c.userid {
+			indexToRemove = indx
+		}
+	}
+
+	clientsConnected.conns = removeFromClientsConnected(indexToRemove)
+	clientsConnected.numOfConnections--
+}
+
 func reader(c *connection) {
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				fmt.Println("User Disconnected: " + c.userid)
+				// remove the conn from map and also form connections array
+				deleteAllEntries(c)
+				return
+			}
 			log.Panic(err)
 		}
 
 		// its a connect message
-		if parts := strings.Split(string(msg), " "); parts[0] == "_C_" {
+		parts := strings.Split(string(msg), " ")
+
+		if parts[0] == "_C_" {
 			userid := parts[1]
 			usersChatMap[userid] = c.userid
 			usersChatMap[c.userid] = userid
-			userConnMap[c.userid] = c.conn
-
-			for _, conn := range clientsConnected.conns {
-				if conn.userid == userid {
-					userConnMap[userid] = conn.conn
-				}
-			}
 
 			c.conn.WriteMessage(2, []byte("Connection successful"))
-
-		} else {
-			// check if user has an entry in userchatmap
-			// route messages tothat user
-			if sendTo, ok := usersChatMap[c.userid]; ok {
-				userConnMap[sendTo].WriteMessage(2, msg)
-			} else {
-				message := c.userid + ": " + string(msg)
-				c.conn.WriteMessage(2, []byte(message))
-			}
+			return
 		}
+
+		if parts[0] == "_QC_" {
+			userToNotify := usersChatMap[c.userid]
+			closeMessage := c.userid + " Closed the current chat"
+			delete(usersChatMap, c.userid)
+			delete(usersChatMap, userToNotify)
+
+			userConnMap[userToNotify].WriteMessage(2, []byte(closeMessage))
+			return
+		}
+
+		// check if user has an entry in userchatmap
+		// route messages tothat user
+		if sendTo, ok := usersChatMap[c.userid]; ok {
+			userConnMap[sendTo].WriteMessage(2, msg)
+			return
+		}
+
+		message := c.userid + ": " + string(msg)
+		c.conn.WriteMessage(2, []byte(message))
+		return
 	}
 }
 
@@ -92,6 +134,7 @@ func newSocketConnection(w http.ResponseWriter, r *http.Request) {
 	clientsConnected.conns = append(clientsConnected.conns, c)
 
 	fmt.Println("New user connected: " + userid)
+	userConnMap[userid] = conn
 
 	go reader(c)
 }
