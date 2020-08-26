@@ -1,4 +1,4 @@
-module github.com/Prashant-sharma3012/chat-app
+module github.com/Prashant-sharma3012/command-line-chat-app
 
 require (
 	github.com/google/uuid v1.0.0
