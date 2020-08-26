@@ -71,10 +71,13 @@ func reader(c *connection) {
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				fmt.Println("User Disconnected: " + c.userid)
-				// remove the conn from map and also form connections array
+				fmt.Println("Deleting All User Records")
 				deleteAllEntries(c)
 			}
-			fmt.Println(err)
+
+			fmt.Println("User Disconnected: " + c.userid)
+			fmt.Println("Deleting All User Records")
+			deleteAllEntries(c)
 			return
 		}
 
