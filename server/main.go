@@ -94,9 +94,6 @@ func reader(c *connection) {
 			delete(usersChatMap, userToNotify)
 			userConnMap[userToNotify].WriteMessage(2, []byte(closeMessage))
 		} else if sendTo, ok := usersChatMap[c.userid]; ok {
-			fmt.Println("to chat")
-			fmt.Println(sendTo)
-			fmt.Println(string(msg))
 			userConnMap[sendTo].WriteMessage(2, msg)
 		} else {
 			message := c.userid + ": " + string(msg)
